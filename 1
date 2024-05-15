@@ -1,59 +1,22 @@
-import pyautogui as pg
-from pynput.keyboard import Listener
-from pynput import keyboard
-import json
-import os
-import constants
+import ctypes
+import pygetwindow as gw
 
+GWL_EXSTYLE = -20
+WS_EX_LAYERED = 0x00080000
+LWA_ALPHA = 0x00000002
 
-def create_folder():
-  if not os.path.isdir(constants.FOLDER_NAME):
-     os.mkdir(constants.FOLDER_NAME)
+OPACITY = 2 # 0 -- 255
+WINDOW_TITLE = "Tibia - Derwah Nabarkan"
+target_window = gw.getWindowsWithTitle(WINDOW_TITLE)[0]
 
-class Rec:
-    def __init__(self):
-      create_folder()
-      self.count = 0
-      self.coordinates = []
+if target_window is not None:
+    target_hwnd = target_window._hWnd
 
-    def photo(self):
-        x, y = pg.position()
-        photo = pg.screenshot(region=(x - 3, y - 3, 6, 6))
-        path = (f"{constants.FOLDER_NAME}/flag_{self.count}.png")
-        photo.save(path)
-        self.count = self.count + 1
-        infos = {
-           "path": path,
-           "down_hole": 0,
-           "up_hole": 0,
-           "wait": 10
-        }
-        self.coordinates.append(infos)
+    ex_style = ctypes.windll.user32.GetWindowLongA(target_hwnd, GWL_EXSTYLE)
+    ctypes.windll.user32.SetWindowLongA(target_hwnd, GWL_EXSTYLE, ex_style | WS_EX_LAYERED)
 
-    def down_hole(self):
-       last_coordinates = self.coordinates[-1]
-       last_coordinates["down_hole"] = 1
+    ctypes.windll.user32.SetLayeredWindowAttributes(target_hwnd, 0, OPACITY, LWA_ALPHA)
 
-    def up_hole(self):
-       last_coordinates = self.coordinates[-1]
-       last_coordinates["up_hole"] = 1
-  
-    def key_code(self, key):
-        if key == keyboard.Key.esc:
-            with open(f"{constants.FOLDER_NAME}/infos.json", "w") as file:
-                file.write(json.dumps(self.coordinates))
-            return False
-        if key == keyboard.Key.insert:
-           self.photo()
-        if key == keyboard.Key.page_down:
-            self.down_hole()
-        if key == keyboard.Key.page_up:
-            self.up_hole()
-
-
-    def start(self):
-        with Listener(on_press=self.key_code) as listener:
-            listener.join()
-
-record = Rec()
-record.start()
+    print("Opacidade da janela modificada.")
+else:
+    print("Janela não encontrada.")
